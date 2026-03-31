@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bloco Boom</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(circle at top, #1a2550 0%, #0d1430 35%, #070b1b 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 18px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 1200px;
+      display: grid;
+      grid-template-columns: 300px 1fr 300px;
+      gap: 18px;
+    }
+
+    .panel {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 24px;
+      padding: 18px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+      backdrop-filter: blur(10px);
+    }
+
+    .title {
+      font-size: 32px;
+      margin: 0 0 8px;
+    }
+
+    .sub {
+      margin: 0 0 18px;
+      color: #cad8ff;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.07);
+      border-radius: 18px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .stat-card span {
+      display: block;
+      font-size: 12px;
+      color: #c8d8ff;
+      margin-bottom: 8px;
+    }
+
+    .stat-card strong {
+      font-size: 28px;
+    }
+
+    .btn {
+      width: 100%;
+      border: none;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #13203b;
+      background: linear-gradient(135deg, #ffd85a, #ffb347);
+      box-shadow: 0 8px 20px rgba(255, 179, 71, 0.28);
+      transition: transform .15s ease, filter .15s ease;
+    }
+
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.03); }
+
+    .hint-box {
+      margin-top: 16px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 18px;
+      padding: 14px;
+      color: #dce7ff;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .board-wrap {
+      position: relative;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 28px;
+      padding: 18px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      background: linear-gradient(180deg, #17244f 0%, #0f1a39 100%);
+      border-radius: 22px;
+      touch-action: none;
+    }
+
+    .tray-title {
+      margin: 0 0 14px;
+      font-size: 22px;
+    }
+
+    .pieces {
+      display: grid;
+      gap: 14px;
+    }
+
+    .piece-card {
+      background: rgba(255,255,255,0.06);
+      border: 2px solid transparent;
+      border-radius: 18px;
+      padding: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 110px;
+      cursor: pointer;
+      transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+
+    .piece-card:hover {
+      transform: translateY(-2px);
+      background: rgba(255,255,255,0.09);
+    }
+
+    .piece-card.selected {
+      border-color: #ffd85a;
+      box-shadow: 0 0 0 4px rgba(255,216,90,0.16);
+      background: rgba(255,255,255,0.11);
+    }
+
+    .mini-grid {
+      display: grid;
+      gap: 6px;
+      justify-content: center;
+      align-content: center;
+    }
+
+    .mini-cell {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.08);
+    }
+
+    .mini-cell.filled {
+      box-shadow: inset 0 -3px 0 rgba(0,0,0,0.18), 0 0 10px rgba(255,255,255,0.08);
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 18px;
+      border-radius: 22px;
+      background: rgba(4, 8, 20, 0.78);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      width: min(450px, 100%);
+      background: rgba(255,255,255,0.09);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 24px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 34px;
+    }
+
+    .card p {
+      color: #d9e5ff;
+      line-height: 1.6;
+    }
+
+    .hidden { display: none; }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <h1 class="title">Bloco Boom</h1>
+      <p class="sub">Jogo inspirado no estilo de encaixar blocos. Escolha uma peça, clique no tabuleiro para colocar e complete linhas ou colunas para limpar.</p>
+
+      <div class="stats">
+        <div class="stat-card">
+          <span>Pontos</span>
+          <strong id="score">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>Recorde</span>
+          <strong id="best">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>Combo</span>
+          <strong id="combo">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>Limpas</span>
+          <strong id="clears">0</strong>
+        </div>
+      </div>
+
+      <button class="btn" id="restartBtn">Novo jogo</button>
+
+      <div class="hint-box">
+        <strong>Como jogar:</strong><br>
+        1. Clique em uma das 3 peças.<br>
+        2. Clique no tabuleiro para encaixar.<br>
+        3. Feche linhas ou colunas para limpar.<br>
+        4. O jogo acaba quando nenhuma peça cabe.
+      </div>
+    </aside>
+
+    <main class="board-wrap">
+      <canvas id="board" width="640" height="640"></canvas>
+
+      <div class="overlay" id="startOverlay">
+        <div class="card">
+          <h2>Começar</h2>
+          <p>Esse é um jogo básico no estilo Block Blast para você publicar no itch.io. Funciona no navegador e também no celular.</p>
+          <button class="btn" id="startBtn">Jogar agora</button>
+        </div>
+      </div>
+
+      <div class="overlay hidden" id="gameOverOverlay">
+        <div class="card">
+          <h2>Fim de jogo</h2>
+          <p id="finalText">Sua pontuação foi 0.</p>
+          <button class="btn" id="playAgainBtn">Jogar novamente</button>
+        </div>
+      </div>
+    </main>
+
+    <aside class="panel">
+      <h2 class="tray-title">Peças</h2>
+      <div class="pieces" id="piecesContainer"></div>
+      <div class="hint-box" style="margin-top:18px;">
+        <strong>Dica:</strong> priorize deixar espaço livre no centro do tabuleiro. Às vezes limpar duas linhas de uma vez dá muito mais ponto.
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d');
+    const piecesContainer = document.getElementById('piecesContainer');
+    const scoreEl = document.getElementById('score');
+    const bestEl = document.getElementById('best');
+    const comboEl = document.getElementById('combo');
+    const clearsEl = document.getElementById('clears');
+    const restartBtn = document.getElementById('restartBtn');
+    const startBtn = document.getElementById('startBtn');
+    const playAgainBtn = document.getElementById('playAgainBtn');
+    const startOverlay = document.getElementById('startOverlay');
+    const gameOverOverlay = document.getElementById('gameOverOverlay');
+    const finalText = document.getElementById('finalText');
+
+    const gridSize = 8;
+    const cellSize = 68;
+    const padding = 48;
+    const boardSize = cellSize * gridSize;
+
+    let board = [];
+    let pieces = [];
+    let selectedPieceIndex = null;
+    let score = 0;
+    let best = Number(localStorage.getItem('blocoBoomBest')) || 0;
+    let combo = 0;
+    let clears = 0;
+    let playing = false;
+    let hoverCell = null;
+    let particles = [];
+
+    const colors = ['#4fd1ff', '#8f7cff', '#ff8e53', '#45e39d', '#ffd95a', '#ff668f'];
+
+    const SHAPES = [
+      [[1]],
+      [[1,1]],
+      [[1],[1]],
+      [[1,1,1]],
+      [[1],[1],[1]],
+      [[1,1],[1,1]],
+      [[1,0],[1,1]],
+      [[0,1],[1,1]],
+      [[1,1],[1,0]],
+      [[1,1],[0,1]],
+      [[1,1,1],[0,1,0]],
+      [[1,0],[1,0],[1,1]],
+      [[0,1],[0,1],[1,1]],
+      [[1,1,1,1]],
+      [[1],[1],[1],[1]],
+      [[1,1,1],[1,0,0]],
+      [[1,1,1],[0,0,1]],
+      [[1,1,1],[1,1,1]]
+    ];
+
+    function makeBoard() {
+      board = Array.from({ length: gridSize }, () => Array(gridSize).fill(null));
+    }
+
+    function randomColor() {
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    function createPiece(shape = null) {
+      const cells = shape || SHAPES[Math.floor(Math.random() * SHAPES.length)];
+      return {
+        shape: cells,
+        color: randomColor(),
+        used: false
+      };
+    }
+
+    function refillPieces() {
+      if (pieces.every(piece => piece.used)) {
+        pieces = [createPiece(), createPiece(), createPiece()];
+        selectedPieceIndex = null;
+        renderPieces();
+      }
+    }
+
+    function resetGame() {
+      makeBoard();
+      pieces = [createPiece(), createPiece(), createPiece()];
+      selectedPieceIndex = null;
+      score = 0;
+      combo = 0;
+      clears = 0;
+      hoverCell = null;
+      particles = [];
+      updateHud();
+      renderPieces();
+      draw();
+    }
+
+    function updateHud() {
+      scoreEl.textContent = score;
+      bestEl.textContent = best;
+      comboEl.textContent = combo;
+      clearsEl.textContent = clears;
+    }
+
+    function renderPieces() {
+      piecesContainer.innerHTML = '';
+
+      pieces.forEach((piece, index) => {
+        const card = document.createElement('div');
+        card.className = 'piece-card';
+        if (selectedPieceIndex === index) card.classList.add('selected');
+        if (piece.used) {
+          card.style.opacity = '.28';
+          card.style.cursor = 'default';
+        }
+
+        const rows = piece.shape.length;
+        const cols = piece.shape[0].length;
+        const grid = document.createElement('div');
+        grid.className = 'mini-grid';
+        grid.style.gridTemplateColumns = `repeat(${cols}, 20px)`;
+        grid.style.gridTemplateRows = `repeat(${rows}, 20px)`;
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cell = document.createElement('div');
+            cell.className = 'mini-cell';
+            if (piece.shape[r][c]) {
+              cell.classList.add('filled');
+              cell.style.background = piece.color;
+            }
+            grid.appendChild(cell);
+          }
+        }
+
+        card.appendChild(grid);
+
+        card.addEventListener('click', () => {
+          if (!playing || piece.used) return;
+          selectedPieceIndex = selectedPieceIndex === index ? null : index;
+          renderPieces();
+          draw();
+        });
+
+        piecesContainer.appendChild(card);
+      });
+    }
+
+    function boardToCanvas(col, row) {
+      return {
+        x: padding + col * cellSize,
+        y: padding + row * cellSize
+      };
+    }
+
+    function canPlace(piece, startRow, startCol) {
+      for (let r = 0; r < piece.shape.length; r++) {
+        for (let c = 0; c < piece.shape[r].length; c++) {
+          if (!piece.shape[r][c]) continue;
+          const rr = startRow + r;
+          const cc = startCol + c;
+          if (rr < 0 || rr >= gridSize || cc < 0 || cc >= gridSize) return false;
+          if (board[rr][cc]) return false;
+        }
+      }
+      return true;
+    }
+
+    function placePiece(piece, startRow, startCol) {
+      let placedCells = 0;
+      for (let r = 0; r < piece.shape.length; r++) {
+        for (let c = 0; c < piece.shape[r].length; c++) {
+          if (!piece.shape[r][c]) continue;
+          board[startRow + r][startCol + c] = piece.color;
+          placedCells++;
+          const pos = boardToCanvas(startCol + c, startRow + r);
+          spawnParticles(pos.x + cellSize / 2, pos.y + cellSize / 2, piece.color, 5);
+        }
+      }
+
+      score += placedCells * 10;
+      clearLines();
+      if (score > best) {
+        best = score;
+        localStorage.setItem('blocoBoomBest', best);
+      }
+      updateHud();
+    }
+
+    function clearLines() {
+      const rowsToClear = [];
+      const colsToClear = [];
+
+      for (let r = 0; r < gridSize; r++) {
+        if (board[r].every(cell => cell)) rowsToClear.push(r);
+      }
+
+      for (let c = 0; c < gridSize; c++) {
+        let full = true;
+        for (let r = 0; r < gridSize; r++) {
+          if (!board[r][c]) {
+            full = false;
+            break;
+          }
+        }
+        if (full) colsToClear.push(c);
+      }
+
+      const total = rowsToClear.length + colsToClear.length;
+      if (!total) {
+        combo = 0;
+        return;
+      }
+
+      rowsToClear.forEach(r => {
+        for (let c = 0; c < gridSize; c++) {
+          const pos = boardToCanvas(c, r);
+          spawnParticles(pos.x + cellSize / 2, pos.y + cellSize / 2, '#ffffff', 8);
+          board[r][c] = null;
+        }
+      });
+
+      colsToClear.forEach(c => {
+        for (let r = 0; r < gridSize; r++) {
+          const pos = boardToCanvas(c, r);
+          spawnParticles(pos.x + cellSize / 2, pos.y + cellSize / 2, '#ffffff', 8);
+          board[r][c] = null;
+        }
+      });
+
+      combo++;
+      clears += total;
+      score += total * 120 + combo * 30;
+    }
+
+    function hasAnyMove() {
+      const available = pieces.filter(piece => !piece.used);
+      if (!available.length) return true;
+
+      for (const piece of available) {
+        for (let r = 0; r < gridSize; r++) {
+          for (let c = 0; c < gridSize; c++) {
+            if (canPlace(piece, r, c)) return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function endGame() {
+      playing = false;
+      finalText.textContent = `Sua pontuação foi ${score}.`;
+      gameOverOverlay.classList.remove('hidden');
+    }
+
+    function drawBoard() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#10204a';
+      ctx.fillRect(padding - 10, padding - 10, boardSize + 20, boardSize + 20);
+
+      for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+          const x = padding + c * cellSize;
+          const y = padding + r * cellSize;
+
+          ctx.fillStyle = board[r][c] ? board[r][c] : 'rgba(255,255,255,0.08)';
+          roundRect(ctx, x + 3, y + 3, cellSize - 6, cellSize - 6, 14, true, false);
+
+          if (board[r][c]) {
+            ctx.fillStyle = 'rgba(255,255,255,0.18)';
+            roundRect(ctx, x + 10, y + 8, cellSize - 22, 14, 10, true, false);
+          }
+        }
+      }
+    }
+
+    function drawPreview() {
+      if (selectedPieceIndex === null || !hoverCell) return;
+      const piece = pieces[selectedPieceIndex];
+      if (!piece || piece.used) return;
+
+      const valid = canPlace(piece, hoverCell.row, hoverCell.col);
+      for (let r = 0; r < piece.shape.length; r++) {
+        for (let c = 0; c < piece.shape[r].length; c++) {
+          if (!piece.shape[r][c]) continue;
+          const rr = hoverCell.row + r;
+          const cc = hoverCell.col + c;
+          if (rr < 0 || rr >= gridSize || cc < 0 || cc >= gridSize) continue;
+          const pos = boardToCanvas(cc, rr);
+          ctx.globalAlpha = .45;
+          ctx.fillStyle = valid ? piece.color : '#ff5f7a';
+          roundRect(ctx, pos.x + 3, pos.y + 3, cellSize - 6, cellSize - 6, 14, true, false);
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    function spawnParticles(x, y, color, amount) {
+      for (let i = 0; i < amount; i++) {
+        particles.push({
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 4,
+          vy: (Math.random() - 0.5) * 4,
+          size: Math.random() * 3 + 2,
+          life: 1,
+          color
+        });
+      }
+    }
+
+    function drawParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.03;
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function draw() {
+      drawBoard();
+      drawPreview();
+      drawParticles();
+      if (playing) requestAnimationFrame(draw);
+    }
+
+    function getCellFromEvent(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (clientX - rect.left) * scaleX;
+      const y = (clientY - rect.top) * scaleY;
+      const col = Math.floor((x - padding) / cellSize);
+      const row = Math.floor((y - padding) / cellSize);
+      return { row, col };
+    }
+
+    function handlePlace(row, col) {
+      if (!playing) return;
+      if (selectedPieceIndex === null) return;
+      const piece = pieces[selectedPieceIndex];
+      if (!piece || piece.used) return;
+      if (!canPlace(piece, row, col)) return;
+
+      placePiece(piece, row, col);
+      piece.used = true;
+      selectedPieceIndex = null;
+      refillPieces();
+      renderPieces();
+      updateHud();
+
+      if (!hasAnyMove()) {
+        setTimeout(endGame, 200);
+      }
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      const { row, col } = getCellFromEvent(e.clientX, e.clientY);
+      if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) hoverCell = { row, col };
+      else hoverCell = null;
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      hoverCell = null;
+    });
+
+    canvas.addEventListener('click', (e) => {
+      const { row, col } = getCellFromEvent(e.clientX, e.clientY);
+      if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) handlePlace(row, col);
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      const { row, col } = getCellFromEvent(touch.clientX, touch.clientY);
+      if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
+        hoverCell = { row, col };
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchend', (e) => {
+      if (!hoverCell) return;
+      handlePlace(hoverCell.row, hoverCell.col);
+    });
+
+    function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+      if (typeof radius === 'number') {
+        radius = { tl: radius, tr: radius, br: radius, bl: radius };
+      }
+      ctx.beginPath();
+      ctx.moveTo(x + radius.tl, y);
+      ctx.lineTo(x + width - radius.tr, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+      ctx.lineTo(x + width, y + height - radius.br);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+      ctx.lineTo(x + radius.bl, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+      ctx.lineTo(x, y + radius.tl);
+      ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+      ctx.closePath();
+      if (fill) ctx.fill();
+      if (stroke) ctx.stroke();
+    }
+
+    function startGame() {
+      startOverlay.classList.add('hidden');
+      gameOverOverlay.classList.add('hidden');
+      playing = true;
+      resetGame();
+      draw();
+    }
+
+    restartBtn.addEventListener('click', startGame);
+    startBtn.addEventListener('click', startGame);
+    playAgainBtn.addEventListener('click', startGame);
+
+    bestEl.textContent = best;
+    makeBoard();
+    pieces = [createPiece(), createPiece(), createPiece()];
+    renderPieces();
+    drawBoard();
+  </script>
+</body>
+</html>
